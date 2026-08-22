@@ -23,6 +23,40 @@ Sentinel AI addresses these operational requirements in an end-to-end full-stack
 
 ---
 
+## Screenshots
+
+### Organization Dashboard
+
+The organization dashboard provides a portfolio-level view of monitored clients, transaction activity, fraud risk, and recent analysis results.
+
+![Sentinel AI Organization Dashboard](docs/screenshots/organization-dashboard.png)
+
+### Analysis Overview
+
+The analysis workspace presents model performance, fraud statistics, risk distribution, dataset health, and analytical findings.
+
+![Sentinel AI Analysis Overview](docs/screenshots/analysis-overview.png)
+
+### Transaction Explorer
+
+The transaction explorer provides server-side transaction analysis with risk scores, risk bands, and investigation-oriented filtering.
+
+![Sentinel AI Transaction Explorer](docs/screenshots/transaction-explorer.png)
+
+### SHAP Investigation
+
+The investigation drawer provides transaction-level SHAP explanations showing the features contributing to an individual risk prediction.
+
+![Sentinel AI SHAP Investigation](docs/screenshots/shap-investigation.png)
+
+### Reports
+
+The reporting interface provides access to generated PDF audit reports and report downloads.
+
+![Sentinel AI Reports](docs/screenshots/reports.png)
+
+---
+
 ## The Problem
 
 Traditional fraud detection systems and baseline models frequently encounter four fundamental operational hurdles:
