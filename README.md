@@ -17,19 +17,19 @@ Sentinel AI is an enterprise-style AI fraud detection and risk intelligence plat
 
 ## Overview
 
-Modern payment processors and financial institutions handle millions of credit card transactions daily, facing continuous automated attacks and sophisticated payment fraud. Detecting fraud requires analyzing highly skewed transaction streams, preventing statistical data leakage during feature engineering, optimizing decision thresholds beyond naive 50% probability cutoffs, providing explainable rationales to investigators, and isolating client data in compliance with financial regulations.
+Modern payment processors and financial institutions handle large volumes of credit card transactions daily, facing automated fraud attacks and chargeback risks. Detecting fraud requires analyzing highly skewed transaction streams, preventing statistical data leakage during feature engineering, optimizing decision thresholds beyond arbitrary 50% probability cutoffs, providing explainable rationales to investigators, and isolating client data in compliance with financial regulations.
 
-Sentinel AI addresses these requirements in an end-to-end, decoupled full-stack architecture operating on **localhost**.
+Sentinel AI addresses these operational requirements in an end-to-end full-stack architecture running locally on **localhost**.
 
 ---
 
 ## The Problem
 
 Traditional fraud detection systems and baseline models frequently encounter four fundamental operational hurdles:
-1. **Extreme Class Imbalance**: Real-world fraud rates typically range between $0.2\%$ and $0.6\%$ ($171:1$ imbalance). Naive accuracy metrics are deceptive, as a model that marks everything as legitimate achieves $>99.4\%$ accuracy while missing all financial losses.
-2. **Data Leakage & Temporal Overfitting**: Applying preprocessing scalers or encoders across full datasets before partitioning leaks statistical parameters from future transactions into training sets, causing validation metrics to collapse on unseen live data.
-3. **The Arbitrary 0.5 Decision Boundary**: Standard binary classifiers use an arbitrary $0.5$ probability threshold. On skewed distributions, this either creates massive false-positive queues that overwhelm human investigators or allows costly fraudulent transactions to slip through.
-4. **The "Black-Box" Investigation Dilemma**: Compliance and regulatory frameworks (e.g., GDPR, FCRA) require institutions to explain why a specific transaction was declined or flagged for review.
+1. **Extreme Class Imbalance**: Fraud rates typically range between $0.2\%$ and $0.6\%$ ($171:1$ imbalance). Standard accuracy metrics are deceptive, as a naive classifier predicting all transactions as legitimate achieves $>99.4\%$ accuracy while failing to intercept any fraud losses.
+2. **Data Leakage & Temporal Overfitting**: Preprocessing whole datasets before temporal partitioning leaks statistical parameters from future transactions into training sets, causing validation metrics to collapse on unseen holdout data.
+3. **The Arbitrary 0.5 Decision Boundary**: Standard binary classifiers rely on a default $0.5$ probability threshold. On skewed distributions, this either creates massive false-positive queues that overwhelm human investigators or allows costly fraudulent transactions to pass undetected.
+4. **The "Black-Box" Investigation Dilemma**: Compliance and regulatory mandates (e.g., GDPR, FCRA) require financial institutions to explain why a specific transaction was flagged, reviewed, or declined.
 
 ---
 
@@ -66,13 +66,13 @@ Sentinel AI solves these challenges by providing:
 
 ## Architecture
 
-Sentinel AI follows a clean, decoupled full-stack architecture:
+Sentinel AI follows a decoupled full-stack architecture:
 
 ```mermaid
 flowchart TD
     User["Fraud Analyst / Risk Officer"]
 
-    subgraph Frontend["Frontend SPA"]
+    subgraph Frontend["Frontend SPA (Port 5173)"]
         UI["React 18 + TypeScript + Vite + Tailwind"]
         Views["Overview, Transactions, Analytics, Investigation, Reports"]
         Client["Axios API Client"]
@@ -80,7 +80,7 @@ flowchart TD
         Views --> Client
     end
 
-    subgraph Backend["FastAPI Backend"]
+    subgraph Backend["FastAPI Backend (Port 8001)"]
         API["FastAPI REST API"]
         Auth["JWT Authentication + RBAC"]
         Tenant["Organization / Client Tenant Isolation"]
@@ -92,30 +92,36 @@ flowchart TD
         Tenant --> Analysis
     end
 
-    subgraph Database["Persistence Layer"]
-        DB["SQLAlchemy 2.0"]
-        PostgreSQL["PostgreSQL"]
-        SQLite["SQLite Developer/Test Fallback"]
+    subgraph Persistence["Persistence Layer"]
+        DB["SQLAlchemy 2.0 Async Engine"]
+        PostgreSQL["PostgreSQL Primary Database"]
+        SQLite["SQLite Developer / Test Fallback"]
         DB --> PostgreSQL
         DB --> SQLite
     end
 
-    subgraph ML["ML & Explainability"]
+    subgraph MLPipeline["ML & Explainability Engine"]
         Split["Chronological Train / Validation / Test Split"]
+        Preproc["Fit-on-Train Preprocessing"]
         Features["Leak-Free Feature Engineering"]
-        Models["Random Forest + Logistic Regression Benchmark"]
-        Threshold["PR-AUC / F1 Threshold Optimization"]
-        Risk["Risk Score + Risk Bands"]
-        SHAP["SHAP Local Explainability"]
+        CandidateModels["Candidate Models: Random Forest + Logistic Regression + XGBoost"]
+        Validation["Validation PR-AUC & ROC-AUC Benchmarking"]
+        ThresholdOpt["PR-AUC / F1 Threshold Optimization: tau*"]
+        Holdout["Holdout Evaluation on Unseen Test Partition"]
+        RiskEngine["Deterministic Risk Scoring: 0 - 100 Bands"]
+        SHAPEngine["SHAP Local TreeExplainer"]
 
-        Split --> Features
-        Features --> Models
-        Models --> Threshold
-        Threshold --> Risk
-        Risk --> SHAP
+        Split --> Preproc
+        Preproc --> Features
+        Features --> CandidateModels
+        CandidateModels --> Validation
+        Validation --> ThresholdOpt
+        ThresholdOpt --> Holdout
+        Holdout --> RiskEngine
+        RiskEngine --> SHAPEngine
     end
 
-    subgraph Reporting["Reporting"]
+    subgraph ReportingEngine["Reporting Engine"]
         PDF["ReportLab PDF Generator"]
         Charts["Matplotlib Charts"]
         PDF --> Charts
@@ -124,28 +130,43 @@ flowchart TD
     User --> UI
     Client <--> API
     Analysis --> DB
-    Analysis --> ML
-    ML --> DB
-    Analysis --> PDF
-    PDF --> UI
+    Analysis --> MLPipeline
+    MLPipeline --> DB
+    Analysis --> ReportingEngine
+    ReportingEngine --> UI
 ```
 
 ---
 
 ## Multi-Tenant Architecture & Access Control
 
-Sentinel AI enforces strict organization-level data isolation. All clients, datasets, machine learning analyses, transactions, reports, and audit logs are scoped to an `organization_id`. Cross-tenant queries are blocked at the API dependency layer.
+Sentinel AI implements strict multi-tenant isolation across all resources. Cross-organization access is blocked at the backend authorization and database query layers using tenant-scoped queries.
+
+### Phase 9 Tenant Hierarchy
+
+```
+Global User
+└── Organization
+    ├── Organization Memberships & RBAC (ADMIN, ANALYST, VIEWER)
+    ├── Security & Operational Audit Logs
+    └── Institutional Clients
+        ├── Isolated Dataset Repositories
+        ├── Persistent ML Analyses
+        │   ├── Scored & Flagged Transactions
+        │   └── SHAP Feature Explanations
+        └── Generated PDF Audit Reports
+```
 
 ```mermaid
 erDiagram
-    ORGANIZATION ||--o{ USER_MEMBERSHIP : manages
     USER ||--o{ USER_MEMBERSHIP : belongs_to
+    ORGANIZATION ||--o{ USER_MEMBERSHIP : manages
     ORGANIZATION ||--o{ CLIENT : owns
+    ORGANIZATION ||--o{ AUDIT_LOG : tracks
     CLIENT ||--o{ DATASET : contains
     CLIENT ||--o{ ANALYSIS : executes
     ANALYSIS ||--o{ TRANSACTION : persists
     ANALYSIS ||--o{ REPORT : generates
-    ORGANIZATION ||--o{ AUDIT_LOG : tracks
 ```
 
 ### Role-Based Access Control (RBAC) Matrix
@@ -168,6 +189,18 @@ erDiagram
 ## Machine Learning Pipeline
 
 The Sentinel AI machine learning pipeline is structured into 11 distinct, leak-free phases:
+
+```mermaid
+flowchart LR
+    A["1. Chronological Split"] --> B["2. Fit-on-Train Preprocessing"]
+    B --> C["3. Feature Engineering"]
+    C --> D["4. Candidate Models"]
+    D --> E["5. Validation Benchmark"]
+    E --> F["6. Threshold Optimization"]
+    F --> G["7. Holdout Evaluation"]
+    G --> H["8. Risk Scoring"]
+    H --> I["9. SHAP Explainability"]
+```
 
 1. **Dataset Inspection & Structural Pre-Flight**: Validates file size, row/column counts, missing values, duplicates, and binary target integrity without in-place mutation.
 2. **PII Exclusion**: Removes sensitive personal identifiers (`cc_num`, `first`, `last`, `street`, `dob`) before matrix generation.
@@ -192,7 +225,7 @@ The Sentinel AI machine learning pipeline is structured into 11 distinct, leak-f
 
 ## Models & Benchmark Results
 
-Models were evaluated against the real-world [Kaggle Credit Card Fraud Detection Dataset](https://www.kaggle.com/datasets/kartik2112/fraud-detection) ($1,296,675$ training transactions and $555,719$ chronologically separated unseen test transactions):
+Models were evaluated against the standard synthetic credit-card transaction benchmark dataset ($1,296,675$ training transactions and $555,719$ chronologically separated unseen holdout transactions):
 
 | Model | Validation PR-AUC | Validation ROC-AUC | Validation Precision | Validation Recall | Validation F1 | Optimal Threshold ($\tau^*$) | Unseen Test PR-AUC |
 |---|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
@@ -247,8 +280,8 @@ Sentinel AI implements defense-in-depth security best practices:
 - **Password Hashing**: Cryptographic password hashing using `bcrypt` with adaptive salt generation.
 - **Multi-Tenant Isolation**: Database queries strictly filter on `organization_id`; cross-tenant access is rejected with HTTP 403/404.
 - **PII Stripping**: Primary account numbers (`cc_num`), customer names, and street addresses are purged before vectorization.
-- **Input Sanitization**: Pydantic v2 validation models on all endpoints with sanitized error messages.
-- **File Validation**: Strict `.csv` extension verification, maximum file size limits (500 MB), and MIME-type enforcement.
+- **Upload Validation & Path Traversal Protection**: Secure filename sanitization, extension validation (`.csv`), file size limits (500 MB), and path traversal countermeasures.
+- **Sanitized API Errors**: Production exception handlers preventing raw database or internal stack traces from leaking to API responses.
 - **Append-Only Audit Trail**: Immutable logging of administrative events, dataset uploads, analyses, and investigator actions.
 
 ---
@@ -289,14 +322,15 @@ Sentinel AI/
 │   │   ├── api/
 │   │   │   ├── deps.py                  # JWT auth & RBAC dependency injectors
 │   │   │   └── v1/                      # REST endpoints (auth, orgs, clients, analyses, etc.)
-│   │   ├── core/                        # Application configuration, security & exceptions
+│   │   ├── core/                        # Application security, exceptions & session store
 │   │   ├── db/                          # SQLAlchemy 2.0 session factory & Base model
 │   │   ├── models/                      # SQLAlchemy models (User, Org, Client, Analysis, etc.)
 │   │   ├── repositories/                # Async database repository access layer
 │   │   ├── schemas/                     # Pydantic v2 validation schemas
 │   │   ├── services/                    # Business logic & ML orchestration services
+│   │   ├── config.py                    # Application settings & environment variables
 │   │   └── main.py                      # FastAPI application entrypoint & middleware
-│   └── tests/                           # 72 automated pytest test suites
+│   └── tests/                           # 72 backend tests
 ├── frontend/
 │   ├── src/
 │   │   ├── api/                         # Axios client & typed API endpoints
@@ -310,7 +344,7 @@ Sentinel AI/
 │   ├── tsconfig.json
 │   └── vite.config.ts
 ├── data/
-│   ├── raw/                             # Local raw CSV datasets (fraudTrain.csv, fraudTest.csv)
+│   ├── raw/                             # Local raw benchmark CSV datasets
 │   ├── uploads/                         # Ingested client CSV files
 │   └── reports/                         # Generated executive PDF reports
 ├── docs/                                # Technical architecture, portfolio guide & API documentation
@@ -329,14 +363,15 @@ Sentinel AI/
 | **Backend Framework** | FastAPI (Python 3.10+) | Asynchronous REST API, dependency injection, OpenAPI documentation |
 | **Data Validation** | Pydantic v2 | Type validation, request/response serialization, sanitized errors |
 | **ORM & Persistence** | SQLAlchemy 2.0 / Alembic | Async ORM, migration tracking, PostgreSQL / SQLite dual compatibility |
+| **Relational Databases** | PostgreSQL / SQLite | Primary production database with local zero-setup developer fallback |
 | **Machine Learning** | Scikit-Learn & XGBoost | Leak-free preprocessing, Random Forest, Logistic Regression, XGBoost |
 | **Explainable AI** | SHAP | TreeExplainer for local transaction-level Shapley additive attributions |
-| **PDF Generation** | ReportLab | Two-pass `NumberedCanvas` executive multi-page audit report compiler |
+| **PDF Generation** | ReportLab & Matplotlib | Two-pass `NumberedCanvas` executive multi-page audit report compiler with charts |
 | **Frontend Framework** | React 18 | Declarative single-page application |
 | **Language & Tooling** | TypeScript & Vite | Strict type safety, rapid HMR, optimized production bundling |
 | **Styling & UI** | Tailwind CSS & Lucide Icons | Dark enterprise fintech design system, responsive layouts |
 | **Data Visualization** | Recharts | Interactive SVG charts (Donut, Bar, Histogram, PR curves) |
-| **Testing** | Pytest & Vitest | 72 backend test suites, 7 frontend component unit tests |
+| **Testing & QA** | Pytest & Vitest | 72 backend tests, 7 frontend component unit tests |
 
 ---
 
@@ -380,18 +415,16 @@ npm run dev
 
 Open [http://localhost:5173](http://localhost:5173) in your browser.
 
-> **Default Seed Credentials**:
-> - Email: `admin@sentinel.ai`
-> - Password: `SentinelAdmin2026!`
-> *(A 1-click "Demo Credentials" button is also provided directly on the Login page).*
+> **Authentication**:
+> Demo credentials are available through the application's Login page / local seed configuration.
 
 ---
 
 ## Dataset Setup
 
-Sentinel AI utilizes the standard [Kaggle Credit Card Fraud Detection Dataset](https://www.kaggle.com/datasets/kartik2112/fraud-detection) for benchmark evaluation.
+Sentinel AI utilizes the standard synthetic credit-card transaction benchmark dataset for model evaluation.
 
-To analyze your own datasets or run the benchmark locally:
+To analyze datasets or run benchmarks locally:
 1. Place `fraudTrain.csv` and `fraudTest.csv` inside the `data/raw/` directory.
 2. Large raw CSV files ($>100\text{ MB}$) are gitignored by default to maintain repository cleanliness.
 3. You can upload any CSV dataset with transaction columns (`amt`, `lat`, `long`, `merch_lat`, `merch_long`, `trans_date_trans_time`, `category`, `is_fraud`) directly through the web UI at `/upload`.
@@ -414,7 +447,7 @@ flowchart LR
     J --> K["11. Review Audit Logs"]
 ```
 
-1. **Sign In**: Log in using the seeded administrator credentials or register a new workspace.
+1. **Sign In**: Log in using demo credentials or register a new organization workspace.
 2. **Organization Portfolio**: Review aggregate metrics across monitored institutional clients.
 3. **Client Repository**: Select or create a client institution (e.g. `Apex Financial`).
 4. **Ingest Dataset**: Upload a transaction CSV file. The pre-flight validator audits structural health.
