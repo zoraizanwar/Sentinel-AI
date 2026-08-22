@@ -69,41 +69,65 @@ Sentinel AI solves these challenges by providing:
 Sentinel AI follows a clean, decoupled full-stack architecture:
 
 ```mermaid
-graph TD
-    User([Fraud Analyst / Risk Officer]) <--> UI[React 18 + Vite + Tailwind Dashboard]
-    
-    subgraph FrontendLayer ["Frontend Layer (Port 5173)"]
-        UI --> OrgView[Organization Portfolio & Client Management]
-        UI --> MLView[Analysis Overview, Transactions & Analytics]
-        UI --> Drawer[SHAP Investigation Drawer]
-        UI --> PDFView[PDF Report Generator]
+flowchart TD
+    User["Fraud Analyst / Risk Officer"]
+
+    subgraph Frontend["Frontend SPA"]
+        UI["React 18 + TypeScript + Vite + Tailwind"]
+        Views["Overview, Transactions, Analytics, Investigation, Reports"]
+        Client["Axios API Client"]
+        UI --> Views
+        Views --> Client
     end
-    
-    FrontendLayer <-->|"HTTP / REST (JWT Bearer)"| Gateway[FastAPI API Gateway - Port 8001]
-    
-    subgraph SecurityLayer ["Security & Multi-Tenant Core"]
-        Gateway --> Auth[JWT Authentication & bcrypt Security]
-        Gateway --> RBAC[Role-Based Access Control: Admin | Analyst | Viewer]
-        Gateway --> TenantGuard[Tenant & Client Isolation Enforcer]
-        Gateway --> AuditLogger[Append-Only Audit Log Dispatcher]
+
+    subgraph Backend["FastAPI Backend"]
+        API["FastAPI REST API"]
+        Auth["JWT Authentication + RBAC"]
+        Tenant["Organization / Client Tenant Isolation"]
+        Ingest["CSV Ingestion + Data Quality Validation"]
+        Analysis["Persistent Analysis Service"]
+        API --> Auth
+        Auth --> Tenant
+        Tenant --> Ingest
+        Tenant --> Analysis
     end
-    
-    subgraph MLServiceLayer ["Machine Learning & Explainability Core"]
-        TenantGuard --> Ingest[CSV Ingestion & Pre-flight Validator]
-        Ingest --> Split[Temporal Train / Val / Test Partitioning]
-        Split --> Preproc[Fit-on-Train Preprocessor & Feature Engineering]
-        Preproc --> Models[Candidate Classifier Training: RF | LR | XGBoost]
-        Models --> ThreshOpt[Precision-Recall Curve Threshold Sweep: tau*]
-        ThreshOpt --> Scorer[Deterministic Risk Scoring: 0 - 100 Bands]
-        Scorer --> SHAP[TreeExplainer Local Feature Attribution]
+
+    subgraph Database["Persistence Layer"]
+        DB["SQLAlchemy 2.0"]
+        PostgreSQL["PostgreSQL"]
+        SQLite["SQLite Developer/Test Fallback"]
+        DB --> PostgreSQL
+        DB --> SQLite
     end
-    
-    subgraph StorageLayer ["Persistence & Reporting Layer"]
-        TenantGuard --> DB[("SQLAlchemy 2.0 (PostgreSQL / SQLite)")]
-        TenantGuard --> PDF[ReportLab Multi-Page PDF Engine]
-        DB --> Entities[Orgs | Clients | Datasets | Analyses | Transactions | Audit Logs]
-        PDF --> FileStore[data/reports/ (NumberedCanvas)]
+
+    subgraph ML["ML & Explainability"]
+        Split["Chronological Train / Validation / Test Split"]
+        Features["Leak-Free Feature Engineering"]
+        Models["Random Forest + Logistic Regression Benchmark"]
+        Threshold["PR-AUC / F1 Threshold Optimization"]
+        Risk["Risk Score + Risk Bands"]
+        SHAP["SHAP Local Explainability"]
+
+        Split --> Features
+        Features --> Models
+        Models --> Threshold
+        Threshold --> Risk
+        Risk --> SHAP
     end
+
+    subgraph Reporting["Reporting"]
+        PDF["ReportLab PDF Generator"]
+        Charts["Matplotlib Charts"]
+        PDF --> Charts
+    end
+
+    User --> UI
+    Client <--> API
+    Analysis --> DB
+    Analysis --> ML
+    ML --> DB
+    Analysis --> PDF
+    PDF --> UI
 ```
 
 ---
@@ -378,16 +402,16 @@ To analyze your own datasets or run the benchmark locally:
 
 ```mermaid
 flowchart LR
-    A[1. Sign In / Register] --> B[2. Select Organization]
-    B --> C[3. Select / Create Client]
-    C --> D[4. Ingest CSV Dataset]
-    D --> E[5. Pre-Flight Validation]
-    E --> F[6. Execute ML Analysis]
-    F --> G[7. Review Dashboard KPIs]
-    G --> H[8. Explore Transactions]
-    H --> I[9. Inspect with SHAP]
-    I --> J[10. Generate PDF Report]
-    J --> K[11. Review Audit Logs]
+    A["1. Sign In / Register"] --> B["2. Select Organization"]
+    B --> C["3. Select / Create Client"]
+    C --> D["4. Ingest CSV Dataset"]
+    D --> E["5. Pre-Flight Validation"]
+    E --> F["6. Execute ML Analysis"]
+    F --> G["7. Review Dashboard KPIs"]
+    G --> H["8. Explore Transactions"]
+    H --> I["9. Inspect with SHAP"]
+    I --> J["10. Generate PDF Report"]
+    J --> K["11. Review Audit Logs"]
 ```
 
 1. **Sign In**: Log in using the seeded administrator credentials or register a new workspace.
