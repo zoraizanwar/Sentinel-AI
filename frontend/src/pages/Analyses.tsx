@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FileSpreadsheet, Plus, ArrowRight, Zap, Database, Activity, AlertTriangle } from 'lucide-react';
+import { FileSpreadsheet, Plus, ArrowRight, Zap } from 'lucide-react';
 import { useWorkspace } from '../context/WorkspaceContext';
 import { useAuth } from '../context/AuthContext';
 import { useAnalysis } from '../context/AnalysisContext';

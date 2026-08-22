@@ -1,8 +1,8 @@
-# Sentinel AI — Project Status & Architectural Overview
+# Sentinel AI — Project Status & Verification Matrix
 
 ## 1. Executive Summary
 
-Sentinel AI is an enterprise-grade AI Fraud Detection & Risk Intelligence Platform built to analyze financial transaction datasets, intercept high-risk transactions with evidence-based risk scores, explain model decisions via game-theoretic SHAP attributions, provide real-time interactive dashboards, and compile downloadable executive PDF reports.
+Sentinel AI is an enterprise-grade AI Fraud Detection & Risk Intelligence Platform built to analyze financial transaction datasets, intercept high-risk transactions with evidence-based risk scores, explain model decisions via game-theoretic SHAP attributions, provide real-time interactive multi-tenant dashboards, manage client portfolios, and compile downloadable executive PDF reports.
 
 The platform is **fully implemented, tested, and verified on localhost**.
 
@@ -18,8 +18,8 @@ The platform is **fully implemented, tested, and verified on localhost**.
 | **Phase 4** | Backend Core & REST API Integration | **COMPLETE** | FastAPI REST endpoints, in-memory `SessionStore` with thread-safe `RLock` and TTL. |
 | **Phase 5** | Enterprise React Dashboard & Investigation Workspace | **COMPLETE** | React 18, Vite, TypeScript, Tailwind CSS, Recharts, slide-in SHAP drawer. |
 | **Phase 6** | Enterprise PDF Report Generation with ReportLab | **COMPLETE** | Multi-page executive PDF with in-memory charts, benchmark matrices, and zero PII. |
-| **Phase 7** | Local End-to-End Verification & Security Audit | **COMPLETE** | 61 backend tests, 7 frontend tests, E2E pipeline with real data passed 100%. |
-| **Phase 8** | Documentation, Portfolio Packaging & Final Polish | **COMPLETE** | Comprehensive README, project status, requirements, .gitignore, and zero data fabrication. |
+| **Phase 7** | Local End-to-End Verification & Security Audit | **COMPLETE** | Multi-layer test verification, security review, leak-free validation. |
+| **Phase 8** | Documentation, Portfolio Packaging & Final Polish | **COMPLETE** | Technical architecture documents, developer runbooks, test evidence. |
 | **Phase 9** | Multi-Organization, Client Management & Persistent RBAC | **COMPLETE** | Async PostgreSQL/SQLite persistence, JWT auth, tenant isolation, client portfolio, audit logging, multi-scope PDF reporting. |
 
 ---
@@ -41,13 +41,13 @@ Evaluated on $N_{\text{test}} = 555,719$ unseen chronological transactions ($2,1
 
 ---
 
-## 4. Current Architecture & Localhost Deployment Status
+## 4. Current Architecture & Localhost Verification Status
 
-- **Environment**: Strict LOCALHOST operations (`http://127.0.0.1:8000` backend, `http://localhost:5173` frontend).
-- **Database Status**: Asynchronous SQLAlchemy 2.0 with PostgreSQL/asyncpg (and SQLite/aiosqlite fallback) with full Alembic migrations.
+- **Environment**: Strict LOCALHOST operations (`http://127.0.0.1:8001` backend, `http://localhost:5173` frontend).
+- **Database Status**: Asynchronous SQLAlchemy 2.0 with PostgreSQL/asyncpg primary and SQLite/aiosqlite local fallback with full Alembic migrations.
 - **Multi-Tenancy & RBAC**: Strict tenant isolation across Organizations, Members, Clients, Datasets, Analyses, Transactions, Reports, and Audit Logs.
 - **Privacy & Security**: Zero PII leakage (`cc_num`, names, and full street addresses are excluded from feature matrices, API responses, and generated PDF reports).
-- **Backend Test Status**: 71 tests passed, 0 failed (100% pass rate).
+- **Backend Test Status**: 72 tests passed, 0 failed (100% pass rate).
 - **Frontend Test Status**: 7 tests passed, 0 failed (100% pass rate).
 - **TypeScript & Build**: 0 errors, production build verified.
 
@@ -55,27 +55,32 @@ Evaluated on $N_{\text{test}} = 555,719$ unseen chronological transactions ($2,1
 
 ## 5. Scope Boundaries: Implemented vs. Future Roadmap
 
-### Implemented Features (MVP - Phase 1 through Phase 8)
+### Implemented & Verified Features (v1.0.0)
 - [x] Pre-flight structural and data quality audit engine (missing cells %, duplicate rows %, class balance checks).
 - [x] Leak-free feature transformations (Haversine distance, customer age, cyclical hour/day, night flag, log amounts).
 - [x] Stratified training & validation splits with fit-on-train-only scalers and encoders.
-- [x] Multi-candidate classifier training (Random Forest, Logistic Regression, optional XGBoost).
+- [x] Multi-candidate classifier training (Random Forest, Logistic Regression, XGBoost).
 - [x] Validation Precision-Recall curve threshold optimization ($\tau^* = 0.8255$).
 - [x] Holdout unseen test set evaluation (`fraudTest.csv`).
 - [x] Deterministic risk scoring ($0-100$) and risk band mapping (`LOW`, `MEDIUM`, `HIGH`, `CRITICAL`).
 - [x] Global feature importance rankings and on-demand local SHAP feature attributions.
-- [x] In-memory session management (`SessionStore`) with thread-safe `RLock` and TTL expiration.
-- [x] FastAPI REST API with domain exception handlers and sanitized JSON errors.
+- [x] Dual storage engine: in-memory `SessionStore` and persistent async database (PostgreSQL / SQLite).
+- [x] FastAPI REST API with domain exception handlers, input validation, and sanitized JSON errors.
+- [x] Multi-organization management with strict tenant isolation.
+- [x] Multi-client institutional portfolio management with isolated datasets.
+- [x] Role-Based Access Control (`ORGANIZATION_ADMIN`, `ANALYST`, `VIEWER`).
+- [x] Append-only security and governance audit trail.
 - [x] React + TypeScript + Vite + Tailwind CSS dashboard with responsive dark fintech theme.
+- [x] Global React `ErrorBoundary` with reload recovery.
 - [x] Interactive Recharts charts (Donut risk tier distribution, Category loss bars, 10-bin score histogram, PR curve).
 - [x] Server-side paginated, sorted, and filtered transaction explorer.
 - [x] Slide-in transaction investigation drawer with SHAP waterfall charts.
-- [x] ReportLab multi-page executive PDF report generation with dynamic `Page X of Y` numbered canvas and downloadable blob stream.
-- [x] Automated pytest (61 tests) and vitest (7 tests) suites passing 100%.
+- [x] ReportLab multi-page executive PDF report generation (Organization, Client, and Analysis scopes) with dynamic `Page X of Y` numbered canvas and downloadable blob stream.
+- [x] Automated pytest (72 tests) and vitest (7 tests) suites passing 100%.
 
-### Future Roadmap (Post-MVP / Optional Extensions)
-- [ ] Persistent database storage adapter (PostgreSQL + SQLAlchemy / asyncpg) for multi-user session persistence.
+### Future Roadmap (Post-v1.0.0 / Production Extensions)
+- [ ] Cloud deployment & container orchestration (AWS / GCP / Kubernetes).
 - [ ] Distributed task queues (Celery / Redis / ARQ) for asynchronous background model retraining on multi-gigabyte files.
-- [ ] Post-hoc statistical probability calibration using `CalibratedClassifierCV` (isotonic regression / Platt scaling).
-- [ ] Automated webhook alerting integration (Slack / PagerDuty / Email) for critical risk transaction surges.
-- [ ] Containerization (Docker Compose) and cloud deployment (Kubernetes / ECS).
+- [ ] Automated real-time webhook alerting (Slack / PagerDuty / Webhooks) for critical risk transaction surges.
+- [ ] Cloud object storage integration (S3 / GCS) for distributed dataset and PDF storage.
+- [ ] Post-hoc probability calibration (`CalibratedClassifierCV`) with Platt scaling or isotonic regression.
