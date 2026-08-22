@@ -298,7 +298,7 @@ Sentinel AI integrates game-theoretic SHAP (SHapley Additive exPlanations) to de
 Sentinel AI maps continuous model fraud probabilities into transparent scalar risk scores:
 
 $$
-\text{risk\_score} = \text{round}(\text{fraud\_probability} \times 100, 2)
+\mathrm{risk\_score} = \mathrm{round}(\mathrm{fraud\_probability} \times 100, 2)
 $$
 
 ### Standard Enterprise Risk Tiers
@@ -306,7 +306,7 @@ $$
 - **`LOW` (0 - 20)**: Low risk; eligible for automated straight-through processing.
 - **`MEDIUM` (20 - 50)**: Moderate risk; standard transaction velocity checks applied.
 - **`HIGH` (50 - 80)**: Elevated risk; flagged for supervisory review and secondary authentication.
-- **`CRITICAL` (80 - 100)**: Critical risk exceeding optimal decision threshold $\tau^*$; flagged for immediate containment and intervention.
+- **`CRITICAL` (80 - 100)**: Critical risk exceeding optimal decision threshold `τ*`; flagged for immediate containment and intervention.
 
 ---
 
